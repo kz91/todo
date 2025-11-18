@@ -1,12 +1,10 @@
-/* TailwindCSS の基本セット */
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* Tailwind CSS v4 のインポート */
+@import "tailwindcss";
 
 /* 任意のグローバルスタイル */
 body {
     font-family: system-ui, sans-serif;
     background-color: #f9fafb;
     margin: 0;
-    padding: 0
+    padding: 0;
 }
