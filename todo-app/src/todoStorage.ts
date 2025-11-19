@@ -10,9 +10,10 @@ export const loadTodos = (): Todo[] => {
         if (!stored) return [];
 
         const parsed = JSON.parse(stored);
-        // 日付をDateオブジェクトに変換
+
         return parsed.map((todo: any) => ({
             ...todo,
+            priority: Number(todo.priority) as 1 | 2 | 3,
             deadline: new Date(todo.deadline),
         }));
     } catch (error) {
