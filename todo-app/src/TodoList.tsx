@@ -13,6 +13,7 @@ type Props = {
 
 const TodoList = ({ todos, onToggle, onDelete, onUpdate }: Props) => {
     const [editingTodo, setEditingTodo] = useState<Todo | null>(null);
+    const [deletingTodo, setDeletingTodo] = useState<Todo | null>(null);
 
     if (todos.length === 0) {
         return (
@@ -114,7 +115,7 @@ const TodoList = ({ todos, onToggle, onDelete, onUpdate }: Props) => {
                                     編集
                                 </button>
                                 <button
-                                    onClick={() => onDelete(todo.id)}
+                                    onClick={() => setDeletingTodo(todo)}
                                     className="rounded bg-red-500 px-3 py-1 text-sm text-white transition hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500"
                                     aria-label={`${todo.name}を削除`}
                                 >
@@ -133,6 +134,16 @@ const TodoList = ({ todos, onToggle, onDelete, onUpdate }: Props) => {
                     isOpen={!!editingTodo}
                     onClose={() => setEditingTodo(null)}
                     onSave={onUpdate}
+                />
+            )}
+
+            {/* 削除確認ダイアログ */}
+            {deletingTodo && (
+                <DeleteTodoDialog
+                    todo={deletingTodo}
+                    isOpen={!!deletingTodo}
+                    onClose={() => setDeletingTodo(null)}
+                    onConfirm={() => onDelete(deletingTodo.id)}
                 />
             )}
         </>

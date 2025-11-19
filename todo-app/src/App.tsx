@@ -4,6 +4,7 @@ import type { Todo } from "./types";
 import TodoList from "./TodoList";
 import WelcomeMessage from "./WelcomeMessage";
 import { v4 as uuid } from "uuid";
+import { loadTodos, saveTodos } from "./todoStorage";
 
 const App = () => {
     const [todos, setTodos] = useState<Todo[]>([]);
@@ -11,45 +12,26 @@ const App = () => {
     const [newTodoPriority, setNewTodoPriority] = useState<1 | 2 | 3>(3);
     const [newTodoDeadline, setNewTodoDeadline] = useState("");
     const [showCompleted, setShowCompleted] = useState(true);
-    const [loading, setLoading] = useState(true);
-    const [isComposing, setIsComposing] = useState(false); // IME変換中かどうか
+    const [isComposing, setIsComposing] = useState(false); // IME変換中か
+    const [isLoaded, setIsLoaded] = useState(false); // データが読み込まれたか
 
-    // Supabaseからデータを取得
+    // 初回マウント時にLocalStorageからデータを読み込む
     useEffect(() => {
-        if (user) {
-            fetchTodos();
-        }
-    }, [user]);
+        const loadedTodos = loadTodos();
+        setTodos(loadedTodos);
+        setIsLoaded(true);
+    }, []);
 
-    const fetchTodos = async () => {
-        try {
-            setLoading(true);
-            const { data, error } = await supabase
-                .from('todos')
-                .select('*')
-                .eq('user_id', user?.id)
-                .order('priority', { ascending: true });
+    // todosが変更されたらLocalStorageに保存
+    useEffect(() => {
+        // 初回レンダリング時は保存しない
+        if (!isLoaded) return;
+        saveTodos(todos);
+    }, [todos]);
 
-            if (error) throw error;
+    const uncompletedCount = todos.filter((todo) => !todo.isDone).length;
 
-            const transformedTodos: Todo[] = (data as DbTodo[]).map((dbTodo) => ({
-                id: dbTodo.id,
-                name: dbTodo.name,
-                isDone: dbTodo.is_done,
-                priority: dbTodo.priority as 1 | 2 | 3,
-                deadline: new Date(dbTodo.deadline),
-            }));
-
-            setTodos(transformedTodos);
-        } catch (error) {
-            console.error('Todoの取得に失敗しました:', error);
-            alert('データの取得に失敗しました');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const addNewTodo = async () => {
+    const addNewTodo = () => {
         if (!newTodoName.trim()) {
             alert("タスク名を入力してください");
             return;
@@ -67,105 +49,30 @@ const App = () => {
             deadline,
         };
 
-        try {
-            const { error } = await supabase
-                .from('todos')
-                .insert({
-                    id: newTodo.id,
-                    user_id: user?.id,
-                    name: newTodo.name,
-                    is_done: newTodo.isDone,
-                    priority: newTodo.priority,
-                    deadline: newTodo.deadline.toISOString(),
-                });
-
-            if (error) throw error;
-
-            setTodos([...todos, newTodo]);
-            setNewTodoName("");
-            setNewTodoPriority(3);
-            setNewTodoDeadline("");
-        } catch (error) {
-            console.error('Todoの追加に失敗しました:', error);
-            alert('タスクの追加に失敗しました');
-        }
+        setTodos([...todos, newTodo]);
+        setNewTodoName("");
+        setNewTodoPriority(3);
+        setNewTodoDeadline("");
     };
 
-    const toggleTodo = async (id: string) => {
-        const todo = todos.find((t) => t.id === id);
-        if (!todo) return;
-
-        const newIsDone = !todo.isDone;
-
-        try {
-            const { error } = await supabase
-                .from('todos')
-                .update({ is_done: newIsDone })
-                .eq('id', id);
-
-            if (error) throw error;
-
-            setTodos(
-                todos.map((t) =>
-                    t.id === id ? { ...t, isDone: newIsDone } : t
-                )
-            );
-        } catch (error) {
-            console.error('Todoの更新に失敗しました:', error);
-            alert('タスクの更新に失敗しました');
-        }
+    const toggleTodo = (id: string) => {
+        setTodos(
+            todos.map((todo) =>
+                todo.id === id ? { ...todo, isDone: !todo.isDone } : todo
+            )
+        );
     };
 
-    const deleteTodo = async (id: string) => {
-        if (!confirm("このタスクを削除しますか？")) return;
-
-        try {
-            const { error } = await supabase
-                .from('todos')
-                .delete()
-                .eq('id', id);
-
-            if (error) throw error;
-
-            setTodos(todos.filter((t) => t.id !== id));
-        } catch (error) {
-            console.error('Todoの削除に失敗しました:', error);
-            alert('タスクの削除に失敗しました');
-        }
+    const deleteTodo = (id: string) => {
+        setTodos(todos.filter((todo) => todo.id !== id));
     };
 
-    const updateTodo = async (id: string, updates: Partial<Todo>) => {
-        try {
-            const dbUpdates: Partial<DbTodo> = {};
-            if (updates.name) dbUpdates.name = updates.name;
-            if (updates.isDone !== undefined) dbUpdates.is_done = updates.isDone;
-            if (updates.priority) dbUpdates.priority = updates.priority;
-            if (updates.deadline) dbUpdates.deadline = updates.deadline.toISOString();
-
-            const { error } = await supabase
-                .from('todos')
-                .update(dbUpdates)
-                .eq('id', id);
-
-            if (error) throw error;
-
-            setTodos(
-                todos.map((t) =>
-                    t.id === id ? { ...t, ...updates } : t
-                )
-            );
-        } catch (error) {
-            console.error('Todoの更新に失敗しました:', error);
-            alert('タスクの更新に失敗しました');
-        }
-    };
-
-    const handleSignOut = async () => {
-        try {
-            await signOut();
-        } catch (error) {
-            console.error('ログアウトに失敗しました:', error);
-        }
+    const updateTodo = (id: string, updates: Partial<Todo>) => {
+        setTodos(
+            todos.map((todo) =>
+                todo.id === id ? { ...todo, ...updates } : todo
+            )
+        );
     };
 
     // 表示するTodoをフィルタリング
@@ -179,33 +86,14 @@ const App = () => {
         return a.priority - b.priority;
     });
 
-    const uncompletedCount = todos.filter((todo) => !todo.isDone).length;
-
-    if (loading) {
-        return (
-            <div className="flex min-h-screen items-center justify-center">
-                <div className="text-xl text-gray-600">読み込み中...</div>
-            </div>
-        );
-    }
-
     return (
         <div className="mx-4 mt-10 max-w-2xl md:mx-auto">
             {/* ヘッダー */}
-            <div className="mb-4 flex items-center justify-between">
+            <div className="mb-4">
                 <h1 className="text-2xl font-bold text-gray-800">TodoApp</h1>
-                <div className="flex items-center gap-3">
-                    <span className="text-sm text-gray-600">{user?.email}</span>
-                    <button
-                        onClick={handleSignOut}
-                        className="rounded-md bg-gray-500 px-3 py-1 text-sm text-white transition hover:bg-gray-600"
-                    >
-                        ログアウト
-                    </button>
-                </div>
             </div>
 
-            <WelcomeMessage name={user?.email?.split('@')[0] || "ユーザー"} uncompletedCount={uncompletedCount} />
+            <WelcomeMessage name="ユーザー" uncompletedCount={uncompletedCount} />
 
             {/* 完了タスクの表示切替 */}
             <div className="mb-4 flex items-center gap-2 rounded-lg border bg-white p-3 shadow-sm">
@@ -235,13 +123,10 @@ const App = () => {
                             type="text"
                             value={newTodoName}
                             onChange={(e) => setNewTodoName(e.target.value)}
+                            onCompositionStart={() => setIsComposing(true)}
+                            onCompositionEnd={() => setIsComposing(false)}
                             onKeyDown={(e) => {
-                                // IME変換中かどうかをチェック
-                                if (e.key === "Enter") {
-                                    // isComposingがtrueの場合は変換中なので処理しない
-                                    if (e.nativeEvent.isComposing) {
-                                        return;
-                                    }
+                                if (e.key === "Enter" && !isComposing) {
                                     e.preventDefault();
                                     addNewTodo();
                                 }
@@ -287,7 +172,7 @@ const App = () => {
                         onClick={addNewTodo}
                         className="w-full rounded-md bg-indigo-500 px-4 py-2 font-bold text-white transition hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
                     >
-                        追加
+                        追加 (Enter)
                     </button>
                 </div>
             </div>

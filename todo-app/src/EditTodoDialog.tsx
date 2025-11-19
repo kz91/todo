@@ -89,9 +89,6 @@ const EditTodoDialog = ({ todo, isOpen, onClose, onSave }: Props) => {
                 <h2 className="mb-4 text-xl font-bold text-gray-800">
                     タスクを編集
                 </h2>
-                <p className="mb-4 text-sm text-gray-500">
-                    💡 ヒント: Enterで保存 / Escでキャンセル
-                </p>
 
                 <div className="space-y-4">
                     {/* タスク名 */}
@@ -158,13 +155,13 @@ const EditTodoDialog = ({ todo, isOpen, onClose, onSave }: Props) => {
                         onClick={handleSave}
                         className="flex-1 rounded-md bg-indigo-500 px-4 py-2 font-bold text-white transition hover:bg-indigo-600"
                     >
-                        保存
+                        保存 (Enter)
                     </button>
                     <button
                         onClick={onClose}
                         className="flex-1 rounded-md bg-gray-400 px-4 py-2 font-bold text-white transition hover:bg-gray-500"
                     >
-                        キャンセル
+                        キャンセル (Esc)
                     </button>
                 </div>
             </div>

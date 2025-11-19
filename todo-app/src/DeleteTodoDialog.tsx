@@ -10,19 +10,23 @@ type Props = {
 };
 
 const DeleteTodoDialog = ({ todo, isOpen, onClose, onConfirm }: Props) => {
-    // Escapeキーでキャンセル
+    // Escapeキーでキャンセル、Enterキーで削除
     useEffect(() => {
         if (!isOpen) return;
 
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === "Escape") {
+                e.preventDefault();
                 onClose();
+            } else if (e.key === "Enter") {
+                e.preventDefault();
+                handleConfirm();
             }
         };
 
         document.addEventListener("keydown", handleKeyDown);
         return () => document.removeEventListener("keydown", handleKeyDown);
-    }, [isOpen, onClose]);
+    }, [isOpen, onClose]); // eslint-disable-line react-hooks/exhaustive-deps
 
     if (!isOpen) return null;
 
@@ -63,24 +67,22 @@ const DeleteTodoDialog = ({ todo, isOpen, onClose, onConfirm }: Props) => {
                             優先度: {todo.priority} | 期限: {todo.deadline.toLocaleDateString()}
                         </p>
                     </div>
-                    <p className="text-sm text-red-600">
-                        ⚠️ この操作は取り消せません
-                    </p>
                 </div>
 
                 {/* ボタン */}
                 <div className="flex gap-3">
                     <button
+                        onClick={handleConfirm}
+                        className="flex-1 rounded-md bg-red-500 px-4 py-2 font-bold text-white transition hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500"
+                        autoFocus
+                    >
+                        削除する (Enter)
+                    </button>
+                    <button
                         onClick={onClose}
                         className="flex-1 rounded-md bg-gray-400 px-4 py-2 font-bold text-white transition hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-500"
                     >
-                        キャンセル
-                    </button>
-                    <button
-                        onClick={handleConfirm}
-                        className="flex-1 rounded-md bg-red-500 px-4 py-2 font-bold text-white transition hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500"
-                    >
-                        削除する
+                        キャンセル (Esc)
                     </button>
                 </div>
             </div>
