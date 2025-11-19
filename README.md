@@ -3,6 +3,8 @@
 React + TypeScript で作成したシンプルな Todo リスト Web アプリです。  
 タスクの追加・編集・削除や、優先度や期限管理、完了タスクの表示切替などが可能です。
 
+Link: https://kz91.github.io/todo
+
 ---
 
 ## 特徴
